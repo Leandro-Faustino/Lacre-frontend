@@ -287,7 +287,9 @@ export function LacreDashboard() {
     setExportModalOpen(false); notify("Download da exportação iniciado.");
   }
 
-  const fullWidthViews: View[] = ["metricas", "motoristas", "importacao", "configuracoes"];
+  const [proofModalOpen, setProofModalOpen] = useState(false);
+  const openProofModal = (id: string) => { selectProof(id); setProofModalOpen(true); };
+  const fullWidthViews: View[] = ["metricas", "motoristas", "importacao", "configuracoes", "rastreamento"];
 
   return <div className="app-shell">
     <header className="word-bar"><div className="brand-lockup"><LacreMark/><span className="brand-name">Lacre</span></div><div className="document-name"><strong>Central de operações</strong><span><Icon name="cloud" size={15}/> Conectado</span></div><label className="global-search"><Icon name="search" size={16}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar NF, destinatário ou motorista…"/><kbd>⌘ K</kbd></label><div className="top-actions">{userProfile && <span className="user-badge"><span className="user-role">{userProfile.perfil}</span></span>}<button aria-label="Atualizar dados" onClick={() => void loadDashboard()}><Icon name="refresh"/></button><button aria-label="Sair" onClick={handleSignOut} className="sign-out-btn"><Icon name="arrow" size={16}/></button></div></header>
@@ -325,7 +327,8 @@ export function LacreDashboard() {
         {/* ── RASTREAMENTO ──────────────────────────────────────────── */}
         {view === "rastreamento" && <section className="proof-panel" id="proof-list">
           <div className="panel-heading"><div><span className="eyebrow">RASTREAMENTO</span><h2>Entregas recentes</h2></div><div className="filter-pills" role="group" aria-label="Filtrar entregas">{filters.map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}>{item}</button>)}</div></div>
-          <div className={`proof-table ${compact ? "compact" : ""}`}><div className="table-row table-head"><span>NF / Destinatário</span><span>Motorista</span><span>Data</span><span>Valor NF</span><span>Status</span><span/></div>{loading ? <div className="empty-state"><Icon name="refresh" size={26}/><strong>Carregando entregas…</strong></div> : visibleProofs.length ? visibleProofs.map((proof) => { const date = formatDeliveryDate(proof.createdAt); return <button className={`table-row ${selected?.id === proof.id ? "selected" : ""}`} key={proof.id} onClick={() => selectProof(proof.id)}><span className="customer-cell"><i className="note-icon"><Icon name="file" size={17}/></i><span><strong>{proof.note}</strong><small>{proof.customer}</small></span></span><span><strong>{proof.driver}</strong><small>Série {proof.protocol.slice(0, 12)}</small></span><span><strong>{date.day}</strong><small>{date.time}</small></span><span className="amount">{formatMoney(proof.amount)}</span><span><i className={`status ${statusCssClass(proof.status)}`}>{proof.status === "Lacrada" && <Icon name="check" size={13}/>} {proof.status}</i></span><span className="row-action"><Icon name="chevron" size={17}/></span></button>; }) : <div className="empty-state"><Icon name="search" size={26}/><strong>Nenhuma entrega encontrada</strong><span>Tente outro termo ou ajuste os filtros.</span></div>}</div>
+          <label className="mobile-search"><Icon name="search" size={16}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar NF, destinatário ou motorista…"/></label>
+          <div className={`proof-table ${compact ? "compact" : ""}`}><div className="table-row table-head"><span>NF / Destinatário</span><span>Motorista</span><span>Data</span><span>Valor NF</span><span>Status</span><span/></div>{loading ? <div className="empty-state"><Icon name="refresh" size={26}/><strong>Carregando entregas…</strong></div> : visibleProofs.length ? visibleProofs.map((proof) => { const date = formatDeliveryDate(proof.createdAt); return <button className={`table-row ${selected?.id === proof.id ? "selected" : ""}`} key={proof.id} onClick={() => openProofModal(proof.id)}><span className="customer-cell"><i className="note-icon"><Icon name="file" size={17}/></i><span><strong>{proof.note}</strong><small>{proof.customer}</small></span></span><span data-label="Motorista"><strong>{proof.driver}</strong><small>Série {proof.protocol.slice(0, 12)}</small></span><span data-label="Data"><strong>{date.day}</strong><small>{date.time}</small></span><span className="amount" data-label="Valor NF">{formatMoney(proof.amount)}</span><span data-label="Status"><i className={`status ${statusCssClass(proof.status)}`}>{proof.status === "Lacrada" && <Icon name="check" size={13}/>} {proof.status}</i></span><span className="row-action"><Icon name="eye" size={15}/><b className="row-action-label">Ver comprovante</b></span></button>; }) : <div className="empty-state"><Icon name="search" size={26}/><strong>Nenhuma entrega encontrada</strong><span>Tente outro termo ou ajuste os filtros.</span></div>}</div>
           <div className="panel-footer"><span>Mostrando {visibleProofs.length} de {proofs.length} entregas</span><button onClick={() => { setFilter("Todas"); setQuery(""); }}>Limpar filtros <Icon name="arrow" size={14}/></button></div>
         </section>}
 
@@ -396,11 +399,10 @@ export function LacreDashboard() {
 
       </main>
 
-      {/* ── PREVIEW PANEL (rastreamento only) ──────────────────────── */}
-      {view === "rastreamento" && <aside className="preview-panel">{selected ? <>
-        <div className="preview-heading"><span><small>COMPROVANTE SELECIONADO</small><strong>{selected.note}</strong></span><button aria-label="Editar entrega" onClick={() => setEditingEntrega((v) => !v)} title="Editar"><Icon name="edit" size={16}/></button></div>
+      {/* ── MODAL COMPROVANTE ──────────────────────────────────────── */}
+      {proofModalOpen && selected && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => e.currentTarget === e.target && setProofModalOpen(false)}><section className="modal proof-modal" role="dialog" aria-modal="true">
+        <div className="modal-header"><span><small>COMPROVANTE SELECIONADO</small><h2>{selected.note}</h2></span><div style={{ display: "flex", gap: 4 }}><button aria-label="Editar entrega" onClick={() => setEditingEntrega((v) => !v)} title="Editar"><Icon name="edit" size={16}/></button><button aria-label="Fechar" onClick={() => setProofModalOpen(false)}><Icon name="close"/></button></div></div>
 
-        {/* Edit entrega form */}
         {editingEntrega && <form className="preview-edit" onSubmit={(e) => void updateEntrega(e)}>
           <label className="config-label">Motorista<select name="motorista_id" defaultValue=""><option value="">Manter atual</option>{drivers.map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}</select></label>
           <label className="config-label">Alterar status<select name="status" defaultValue=""><option value="">Manter atual</option><option value="NAO_APLICAVEL">Não aplicável</option><option value="OCORRENCIA_NAO_ENTREGA">Ocorrência — não entregue</option></select></label>
@@ -412,7 +414,6 @@ export function LacreDashboard() {
           <div className="paper-title"><small>COMPROVANTE DE ENTREGA</small><h3>{selected.note}</h3><span>{selected.protocol}</span></div>
           <dl className="paper-details"><div><dt>DESTINATÁRIO</dt><dd>{detailNote?.destinatario_nome ?? selected.customer}<small>{detailNote?.destinatario_documento ?? selected.document}</small></dd></div><div className="split"><span><dt>VALOR DA NOTA</dt><dd>{formatMoney(detailNote?.valor_total ?? selected.amount)}</dd></span><span><dt>EMISSÃO</dt><dd>{detailNote?.emitida_em ? new Intl.DateTimeFormat("pt-BR").format(new Date(detailNote.emitida_em)) : "—"}</dd></span></div><div><dt>MOTORISTA RESPONSÁVEL</dt><dd>{detailDriver?.nome ?? selected.driver}<small>{detailDriver?.telefone ?? ""}</small></dd></div></dl>
 
-          {/* Foto do canhoto */}
           <div className={`proof-photo ${mediaUrl ? "has-photo" : ""}`}>
             {mediaUrl ? <a href={mediaUrl} target="_blank" rel="noopener noreferrer" style={{ display: "contents" }}><img src={mediaUrl} alt="Foto do canhoto" style={{ width: "100%", maxHeight: 200, objectFit: "contain", borderRadius: 3 }}/></a>
             : selected.mediaStatus === "ARMAZENADA" ? <><Icon name="image" size={30}/><span>Canhoto digitalizado</span><small>Clique em &quot;Ver foto&quot; abaixo.</small></>
@@ -423,19 +424,15 @@ export function LacreDashboard() {
           {selected.hash && <div className="paper-hash">SHA-256 · {selected.hash.slice(0, 12)}…</div>}
         </div></div>
 
-        {/* Primary actions */}
         <div className="preview-actions"><button className="primary-button" onClick={downloadPdf}><Icon name="download"/> Baixar PDF</button><button className="secondary-button" onClick={() => void copyPublicLink()}><Icon name="link"/> Link público</button></div>
 
-        {/* Secondary actions */}
         <div className="preview-actions-secondary">
           {detail?.midias?.[0]?.status === "ARMAZENADA" && <button onClick={() => reprocessMedia()} title="Reprocessar OCR/visão"><Icon name="refresh" size={14}/> Reprocessar</button>}
           {selected.status === "Revisão" && <button onClick={() => void reviewMedia(selected.id)} title="Aprovar revisão"><Icon name="check" size={14}/> Aprovar revisão</button>}
           <button onClick={() => void revokePublicToken()} title="Revogar link público"><Icon name="trash" size={14}/> Revogar link</button>
           <button onClick={cancelFiscalEvent} title="Cancelar evento fiscal"><Icon name="close" size={14}/> Cancelar NF-e</button>
         </div>
-
-        <p className="preview-caption"><span className="online-dot"/> Conectado ao sistema em tempo real</p>
-      </> : <div className="empty-state"><Icon name="document" size={28}/><strong>Selecione uma entrega</strong><span>Os detalhes do comprovante aparecerão aqui.</span></div>}</aside>}
+      </section></div>}
     </div>
 
     {/* ── MODAIS ───────────────────────────────────────────────────── */}

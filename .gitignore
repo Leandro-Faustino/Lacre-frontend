@@ -12,6 +12,7 @@
 .DS_Store
 *.pem
 .env*
+.mcp.json
 
 # debug
 npm-debug.log*

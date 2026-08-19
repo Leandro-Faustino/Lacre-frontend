@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 function EyeIcon({ open }: { open: boolean }) {
   return open ? (
@@ -26,16 +26,15 @@ const PASSWORD_RULES = [
   { test: (p: string) => /[^A-Za-z0-9]/.test(p), label: "Um caractere especial" },
 ];
 
-export default function SignUpPage() {
-  const [email, setEmail] = useState("");
+export default function UpdatePasswordPage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [lgpd, setLgpd] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
+  const [done, setDone] = useState(false);
+  const router = useRouter();
 
   const pwdStrength = PASSWORD_RULES.filter((r) => r.test(password));
   const pwdValid = pwdStrength.length === PASSWORD_RULES.length;
@@ -54,33 +53,23 @@ export default function SignUpPage() {
       return;
     }
 
-    if (!lgpd) {
-      setError("Você precisa aceitar a Política de Privacidade para continuar.");
-      return;
-    }
-
     setLoading(true);
 
     const supabase = createClient();
-    const { error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          lgpd_aceito_em: new Date().toISOString(),
-          lgpd_versao: "1.0",
-        },
-      },
-    });
+    const { error: updateError } = await supabase.auth.updateUser({ password });
 
     setLoading(false);
 
-    if (authError) {
-      setError(authError.message);
+    if (updateError) {
+      setError(updateError.message);
       return;
     }
 
-    setSuccess(true);
+    setDone(true);
+    setTimeout(() => {
+      router.push("/");
+      router.refresh();
+    }, 2000);
   }
 
   return (
@@ -96,39 +85,23 @@ export default function SignUpPage() {
         </div>
         <div className="auth-panel-content">
           <h1 className="auth-panel-headline">
-            Comece a organizar suas provas de entrega agora
+            Crie uma nova senha segura para sua conta
           </h1>
           <p className="auth-panel-desc">
-            Crie sua conta e tenha acesso completo ao painel de gestão
-            de entregas com comprovantes digitais.
+            Escolha uma senha forte com pelo menos 8 caracteres.
+            Combine letras maiúsculas, números e caracteres especiais.
           </p>
-
-          <ul className="auth-features">
-            <li className="auth-feature">
-              <span className="auth-feature-icon">1</span>
-              <span><strong>Cadastro rápido</strong> — comece a usar em menos de 2 minutos</span>
-            </li>
-            <li className="auth-feature">
-              <span className="auth-feature-icon">2</span>
-              <span><strong>Sem cartão de crédito</strong> — período de avaliação gratuito</span>
-            </li>
-            <li className="auth-feature">
-              <span className="auth-feature-icon">3</span>
-              <span><strong>Suporte dedicado</strong> — ajuda na configuração e importação de dados</span>
-            </li>
-          </ul>
         </div>
       </div>
 
       <div className="auth-form-panel">
         <div className="auth-form-wrapper">
-          {success ? (
+          {done ? (
             <>
               <div className="auth-form-header">
-                <h2 className="auth-form-title">Conta criada</h2>
+                <h2 className="auth-form-title">Senha atualizada</h2>
                 <p className="auth-form-subtitle">
-                  Enviamos um e-mail de confirmação para <strong>{email}</strong>.
-                  Verifique sua caixa de entrada para ativar a conta.
+                  Sua senha foi redefinida com sucesso. Redirecionando...
                 </p>
               </div>
               <div className="auth-success-box">
@@ -136,42 +109,24 @@ export default function SignUpPage() {
                   <circle cx="24" cy="24" r="24" fill="#e7f4ed" />
                   <path d="M15 24l6 6 12-12" stroke="#237a57" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-                <p>Verifique também a pasta de spam.</p>
+                <p>Você será redirecionado ao painel automaticamente.</p>
               </div>
-              <Link href="/sign-in" className="auth-button" style={{ display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none", marginTop: 24 }}>
-                Ir para o login
-              </Link>
             </>
           ) : (
             <>
               <div className="auth-form-header">
-                <h2 className="auth-form-title">Criar sua conta</h2>
+                <h2 className="auth-form-title">Nova senha</h2>
                 <p className="auth-form-subtitle">
-                  Preencha os dados abaixo para começar
+                  Defina a nova senha para a sua conta.
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="auth-form">
                 <div className="auth-field">
-                  <label htmlFor="signup-email" className="auth-field-label">E-mail corporativo</label>
-                  <input
-                    id="signup-email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    autoComplete="email"
-                    className="auth-input"
-                    placeholder="voce@empresa.com"
-                    autoFocus
-                  />
-                </div>
-
-                <div className="auth-field">
-                  <label htmlFor="signup-password" className="auth-field-label">Senha</label>
+                  <label htmlFor="new-password" className="auth-field-label">Nova senha</label>
                   <div className="auth-input-group">
                     <input
-                      id="signup-password"
+                      id="new-password"
                       type={showPwd ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -179,6 +134,7 @@ export default function SignUpPage() {
                       autoComplete="new-password"
                       className="auth-input"
                       placeholder="Crie uma senha forte"
+                      autoFocus
                     />
                     <button type="button" className="auth-toggle-pwd" onClick={() => setShowPwd(!showPwd)} aria-label={showPwd ? "Ocultar senha" : "Mostrar senha"}>
                       <EyeIcon open={showPwd} />
@@ -196,17 +152,17 @@ export default function SignUpPage() {
                 </div>
 
                 <div className="auth-field">
-                  <label htmlFor="signup-confirm" className="auth-field-label">Confirmar senha</label>
+                  <label htmlFor="confirm-password" className="auth-field-label">Confirmar senha</label>
                   <div className="auth-input-group">
                     <input
-                      id="signup-confirm"
+                      id="confirm-password"
                       type={showConfirm ? "text" : "password"}
                       value={confirm}
                       onChange={(e) => setConfirm(e.target.value)}
                       required
                       autoComplete="new-password"
                       className="auth-input"
-                      placeholder="Repita a senha"
+                      placeholder="Repita a nova senha"
                     />
                     <button type="button" className="auth-toggle-pwd" onClick={() => setShowConfirm(!showConfirm)} aria-label={showConfirm ? "Ocultar senha" : "Mostrar senha"}>
                       <EyeIcon open={showConfirm} />
@@ -214,26 +170,12 @@ export default function SignUpPage() {
                   </div>
                 </div>
 
-                <label className="auth-lgpd">
-                  <input type="checkbox" checked={lgpd} onChange={(e) => setLgpd(e.target.checked)} />
-                  <span>
-                    Autorizo o tratamento dos meus dados pessoais conforme a{" "}
-                    <a href="/politica-privacidade" target="_blank" rel="noopener">Política de Privacidade</a>{" "}
-                    e a <a href="/termos" target="_blank" rel="noopener">Lei Geral de Proteção de Dados (LGPD)</a>.
-                  </span>
-                </label>
-
                 {error && <p className="auth-error">{error}</p>}
 
-                <button type="submit" disabled={loading || !lgpd} className="auth-button">
-                  {loading ? "Criando conta..." : "Criar conta"}
+                <button type="submit" disabled={loading || !pwdValid} className="auth-button">
+                  {loading ? "Salvando..." : "Redefinir senha"}
                 </button>
               </form>
-
-              <p className="auth-footer">
-                Já tem uma conta?{" "}
-                <Link href="/sign-in">Entrar</Link>
-              </p>
             </>
           )}
           <p className="auth-copyright">Lacre &copy; 2026. Todos os direitos reservados.</p>

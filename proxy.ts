@@ -34,6 +34,11 @@ export default async function middleware(request: NextRequest) {
   const isAuthRoute =
     request.nextUrl.pathname.startsWith("/sign-in") ||
     request.nextUrl.pathname.startsWith("/sign-up") ||
+    request.nextUrl.pathname.startsWith("/forgot-password") ||
+    request.nextUrl.pathname.startsWith("/update-password") ||
+    request.nextUrl.pathname.startsWith("/politica-privacidade") ||
+    request.nextUrl.pathname.startsWith("/termos") ||
+    request.nextUrl.pathname.startsWith("/dsar") ||
     request.nextUrl.pathname.startsWith("/p/");
 
   if (!user && !isAuthRoute && !request.nextUrl.pathname.startsWith("/api")) {
@@ -43,7 +48,9 @@ export default async function middleware(request: NextRequest) {
   }
 
   // Usuário logado tentando acessar tela de auth → redireciona para home
-  if (user && isAuthRoute) {
+  // (exceto update-password, que precisa de sessão ativa para o recovery flow)
+  const isRecoveryFlow = request.nextUrl.pathname.startsWith("/update-password");
+  if (user && isAuthRoute && !isRecoveryFlow) {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     return NextResponse.redirect(url);

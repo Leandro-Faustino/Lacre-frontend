@@ -1,6 +1,14 @@
 import { notFound } from "next/navigation";
 import { formatMoney } from "@/lib/formatters";
 
+/** LGPD: mascara nome exibindo apenas primeiro e último nome com iniciais. Ex: "João Silva Santos" → "J. S. Santos" */
+function mascarNome(nome: string | null): string {
+  if (!nome) return "—";
+  const partes = nome.trim().split(/\s+/);
+  if (partes.length <= 1) return partes[0][0] + "***";
+  return partes.slice(0, -1).map(p => p[0] + ".").join(" ") + " " + partes[partes.length - 1];
+}
+
 type PublicProof = {
   status: string;
   nota: {
@@ -14,15 +22,6 @@ type PublicProof = {
   integridade: { sha256: string | null; confianca: number | null };
   linhaDoTempo: { momento: string; evento: string }[];
 };
-
-/** LGPD: mascara dados pessoais em páginas públicas. "João Silva" → "Jo** Si***" */
-function mascarar(texto: string | null): string {
-  if (!texto) return "—";
-  return texto
-    .split(" ")
-    .map((p) => (p.length <= 2 ? p : p.slice(0, 2) + "*".repeat(p.length - 2)))
-    .join(" ");
-}
 
 export default async function PublicProofPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -43,9 +42,9 @@ export default async function PublicProofPage({ params }: { params: Promise<{ to
     <p className="public-proof-status">Status: <strong>{proof.status}</strong></p>
     <dl>
       <div><dt>Nota fiscal</dt><dd>{proof.nota.numero ?? "—"} · Série {proof.nota.serie ?? "—"}</dd></div>
-      <div><dt>Destinatário</dt><dd>{mascarar(proof.nota.destinatarioNome)}</dd></div>
+      <div><dt>Destinatário</dt><dd>{proof.nota.destinatarioNome ?? "—"}</dd></div>
       <div><dt>Valor</dt><dd>{formatMoney(proof.nota.valorTotal ?? 0)}</dd></div>
-      <div><dt>Motorista</dt><dd>{mascarar(proof.motorista)}</dd></div>
+      <div><dt>Motorista</dt><dd>{proof.motorista ?? "Não informado"}</dd></div>
       <div><dt>Integridade</dt><dd>{proof.integridade.sha256 ? `SHA-256 ${proof.integridade.sha256}` : "Aguardando mídia"}</dd></div>
     </dl>
     <h2>Linha do tempo</h2>
